@@ -1,0 +1,33 @@
+{
+    "name": "car_model",
+    "version": "1.0.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mx-car/car_model.git"
+    },
+    "authors": [
+        {
+            "name": "Markus Bader",
+            "email": "markus.bader@mx-robotics.com",
+            "url": "http://www.mx-robotics.com",
+            "maintainer": true
+        }
+    ],
+    "build": {
+        "flags": [
+            "-I common/include"
+        ],
+        "srcFilter": [
+            "+<common/src/car/*.cpp>",
+            "+<common/src/car/model/*.cpp>"
+        ]
+    },
+    "frameworks": "*",
+    "platforms": "*", 
+ 
+    "dependencies": 
+        {
+            "pedvide/Teensy_ADC": "^8.0.38"
+        }
+    
+}
