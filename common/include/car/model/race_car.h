@@ -9,6 +9,7 @@
 #include <array>
 #include <car/math/value.h>
 #include <car/math/motion.h>
+#include <car/com/objects/object.h>
 #include <Servo.h>
 
 namespace car
@@ -30,8 +31,14 @@ namespace car
     {
         class CycleRate;
     }
-
     
+    struct VehileParameters{
+        int16_t angle_offest_motor0[2];
+        int16_t angle_offest_motor1[2];    
+        bool put_into_eeprom();
+        bool get_from_eeprom();
+    };
+
     namespace model
     {
         typedef car::math::Value<car::math::AckermannState> AckermannStateStamped;
@@ -52,7 +59,6 @@ namespace car
             AckermannStateStamped &get_cmd_raw();
             AckermannStateStamped &get_state_raw();
 
-        private:
             Servo                 *steering_servo_; 
             car::bldc::Motor      *motor_[2];
             car::math::PID        *pid_rps_[2];
@@ -61,6 +67,13 @@ namespace car
             car::time::CycleRate  *cycle_pwm_control_;
             AckermannStateStamped cmd_raw_;
             AckermannStateStamped state_raw_;
+            car::com::objects::ControlConfig control_config_;
+            car::com::objects::AckermannConfig *ackermann_config_;
+            car::com::objects::PoseStamped pose_stamped_;
+            car::VehileParameters vehile_parameters_;   /// stored in eeeprom
+
+
+        
         };
     } // namespace car
 } // namespace car

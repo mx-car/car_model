@@ -34,7 +34,6 @@ car::com::mc::Interface msg_tx;      /// object to hande the serial communicatio
 car::com::mc::Interface msg_rx;      /// object to hande the serial communication
 car::time::CycleRate cycle_com(100); /// object for a constant cycle control
 car::com::objects::Text text;        /// object to send
-car::com::objects::AckermannConfig *ackermann_config = NULL;
 car::com::objects::Error *error = NULL;
 
 // the setup routine runs once when you press reset:
@@ -85,12 +84,24 @@ void loop()
       ackermann_state.stamp = car::com::objects::Time::fromMicros(rcar->get_state_raw().stamp);
       msg_tx.push_object(Object(ackermann_state, TYPE_ACKERMANN_STATE));
     }
+    if (rcar->ackermann_config_ != NULL){
+      /// send used ackermann_config
+      // msg_tx.push_object(Object(*rcar->ackermann_config_, TYPE_ACKERMANN_CONFIG));
+    }
+    {
+      /// send used ackermann_config
+      msg_tx.push_object(Object(rcar->pose_stamped_, TYPE_POSE_STAMPED));
+    }
     {
       /// send target state
       AckermannState ackermann_state;
       ackermann_state.copy_from(rcar->get_cmd_raw().value);
       ackermann_state.stamp = car::com::objects::Time::fromMicros(rcar->get_cmd_raw().stamp);
       msg_tx.push_object(Object(ackermann_state, TYPE_ACKERMANN_CMD));
+    }
+    {
+      /// config control
+      msg_tx.push_object(Object(rcar->control_config_, TYPE_CONTROL_CONFIG));
     }
 
     if (error != NULL)
@@ -113,9 +124,10 @@ void loop()
         Time::compute_offset(msg_rx.stamp); /// set clock
         break;
       case TYPE_ACKERMANN_CONFIG: /// case sync object
-        if (ackermann_config == NULL)
-          ackermann_config = new car::com::objects::AckermannConfig;
-        object.get(*ackermann_config);
+        if (rcar->ackermann_config_ == NULL){
+          rcar->ackermann_config_ = new car::com::objects::AckermannConfig;
+        }
+        object.get(*rcar->ackermann_config_);
         break;
       case TYPE_ACKERMANN_CMD:
       { /// case sync object
