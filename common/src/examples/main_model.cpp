@@ -133,6 +133,7 @@ void loop()
       { /// case sync object
         AckermannState cmd;
         object.get(cmd);
+        //cmd.mode = AckermannState::MODE_VELOCITY;
         cmd.copy_to(rcar->get_cmd_raw().value);
         rcar->get_cmd_raw().stamp = car::com::objects::Time::toMicros(cmd.stamp);
       }
