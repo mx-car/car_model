@@ -33,8 +33,7 @@ namespace car
     }
     
     struct VehileParameters{
-        int16_t angle_offest_motor0[2];
-        int16_t angle_offest_motor1[2];    
+        car::com::objects::ControlParameter control;  
         bool put_into_eeprom();
         bool get_from_eeprom();
     };
@@ -50,12 +49,16 @@ namespace car
         public:
             static const int LEFT = 0;
             static const int RIGHT = 1;
+            static const int FORWARD = 0;
+            static const int BACKWARD = 1;
         /**
         * Constructor
         */
             RaceCar();
+            void init();
 
             void update();
+            void apply_parameter();
             AckermannStateStamped &get_cmd_raw();
             AckermannStateStamped &get_state_raw();
 
@@ -67,7 +70,7 @@ namespace car
             car::time::CycleRate  *cycle_pwm_control_;
             AckermannStateStamped cmd_raw_;
             AckermannStateStamped state_raw_;
-            car::com::objects::ControlConfig control_config_;
+            car::com::objects::ControlParameter control_parameter_;
             car::com::objects::AckermannConfig *ackermann_config_;
             car::com::objects::PoseStamped pose_stamped_;
             car::VehileParameters vehile_parameters_;   /// stored in eeeprom

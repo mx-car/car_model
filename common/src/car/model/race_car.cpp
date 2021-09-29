@@ -17,14 +17,13 @@ using namespace car::model;
 
 RaceCar::RaceCar()
 {
-    vehile_parameters_.get_from_eeprom();
-    vehile_parameters_.angle_offest_motor0[0] = -65;
-    vehile_parameters_.angle_offest_motor0[1] = -65 - 90;
-    vehile_parameters_.angle_offest_motor1[0] = -80 + 90;
-    vehile_parameters_.angle_offest_motor1[1] = -80;
+}
 
+void RaceCar::init()
+{
     ackermann_config_ = NULL;
     board_ = new car::bldc::Driver;
+
     motor_[LEFT] = new car::bldc::Motor(std::array<uint8_t, 3>({33, 26, 31}),
                                         std::array<uint8_t, 3>({10, 22, 23}),
                                         std::array<uint8_t, 3>({A15, A16, A17}), 2, car::math::Direction::COUNTERCLOCKWISE);
@@ -35,33 +34,41 @@ RaceCar::RaceCar()
 
     board_->init(motor_[LEFT], motor_[RIGHT]);
 
-    motor_[LEFT]->init(11, std::array<car::math::AngleDeg, 2>({vehile_parameters_.angle_offest_motor0[0], vehile_parameters_.angle_offest_motor0[1]}),
+    motor_[LEFT]->init(11, std::array<car::math::AngleDeg, 2>({
+                                        vehile_parameters_.control.bldc[LEFT].angle_offset[FORWARD], 
+                                        vehile_parameters_.control.bldc[LEFT].angle_offset[BACKWARD]}),
                        std::bind(&car::encoder::Encoder::read, encoder_, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
                        std::bind(&car::bldc::Driver::update_pwm, board_, std::placeholders::_1, std::placeholders::_2),
                        std::bind(&car::bldc::Driver::couple_pwm, board_, std::placeholders::_1, std::placeholders::_2));
 
-    motor_[RIGHT]->init(11, std::array<car::math::AngleDeg, 2>({vehile_parameters_.angle_offest_motor1[0], vehile_parameters_.angle_offest_motor1[1]}),
+    motor_[RIGHT]->init(11, std::array<car::math::AngleDeg, 2>({
+                                        vehile_parameters_.control.bldc[RIGHT].angle_offset[FORWARD], 
+                                        vehile_parameters_.control.bldc[RIGHT].angle_offset[BACKWARD]}),
                         std::bind(&car::encoder::Encoder::read, encoder_, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
                         std::bind(&car::bldc::Driver::update_pwm, board_, std::placeholders::_1, std::placeholders::_2),
                         std::bind(&car::bldc::Driver::couple_pwm, board_, std::placeholders::_1, std::placeholders::_2));
 
+    apply_parameter();
 
-    control_config_.stamp = car::com::objects::Time::now();
-    control_config_.pid[LEFT] = car::com::objects::PIDConfig(0.1, -1, 1, 0.2, 0.05, 0.01);
-    control_config_.pid[RIGHT] = car::com::objects::PIDConfig(0.1, -1, 1, 0.2, 0.05, 0.01);
 
-    const auto &pid_l = control_config_.pid[LEFT];
-    const auto &pid_r = control_config_.pid[RIGHT];
-    pid_rps_[ LEFT] = new car::math::PID(pid_l.dt, pid_l.min, pid_l.max, pid_l.Kp, pid_l.Ki, pid_l.Kd);
-    pid_rps_[RIGHT] = new car::math::PID(pid_r.dt, pid_r.min, pid_r.max, pid_r.Kp, pid_r.Ki, pid_r.Kd);
 
     cycle_pwm_control_ = new car::time::CycleRate(10);
     cmd_raw_().couble(false);
     steering_servo_ = new Servo;
     steering_servo_->attach(4);     
-
 }
 
+void RaceCar::apply_parameter()
+{
+
+    const auto &pid_l = vehile_parameters_.control.pid[LEFT];
+    const auto &pid_r = vehile_parameters_.control.pid[RIGHT];
+    pid_rps_[ LEFT] = new car::math::PID(pid_l.dt, pid_l.min, pid_l.max, pid_l.Kp, pid_l.Ki, pid_l.Kd);
+    pid_rps_[RIGHT] = new car::math::PID(pid_r.dt, pid_r.min, pid_r.max, pid_r.Kp, pid_r.Ki, pid_r.Kd);
+
+    control_parameter_ = vehile_parameters_.control;
+    control_parameter_.stamp = car::com::objects::Time::now();
+}
 void RaceCar::update()
 {
     motor_[LEFT ]->update_pwm();

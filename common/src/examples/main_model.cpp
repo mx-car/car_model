@@ -21,26 +21,30 @@
 #include <car/com/mc/interface.h>
 #include <car/com/objects/error.h>
 
-car::model::RaceCar *rcar;
-car::time::CycleRate cycle_pwm(2); /// object for a constant cycle control
 
 int loop_count = 0;
 size_t delay_count = 0;
+uint32_t timer_count;
 car::com::objects::Array16SC8 delays;
 
-uint32_t timer_count;
 
+car::model::RaceCar *rcar;
+car::time::CycleRate cycle_pwm(2);   /// object for a constant cycle control on the pwm
 car::com::mc::Interface msg_tx;      /// object to hande the serial communication
 car::com::mc::Interface msg_rx;      /// object to hande the serial communication
-car::time::CycleRate cycle_com(100); /// object for a constant cycle control
+car::time::CycleRate cycle_com(100); /// object for a constant cycle control on the pid
 car::com::objects::Text text;        /// object to send
 car::com::objects::Error *error = NULL;
 
 // the setup routine runs once when you press reset:
 void setup()
 {
-  rcar = new car::model::RaceCar();
   car::math::AngleDeg::init();
+
+  
+  rcar = new car::model::RaceCar();
+  rcar->vehile_parameters_.control = car::com::objects::ControlParameter::get_default();
+  rcar->init();
 
   Serial.begin(115200); /// init serial
   while (!Serial)
@@ -101,7 +105,7 @@ void loop()
     }
     {
       /// config control
-      msg_tx.push_object(Object(rcar->control_config_, TYPE_CONTROL_CONFIG));
+      msg_tx.push_object(Object(rcar->control_parameter_, TYPE_CONTROL_CONFIG));
     }
 
     if (error != NULL)
