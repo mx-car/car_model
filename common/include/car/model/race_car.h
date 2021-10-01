@@ -70,7 +70,8 @@ namespace car
             car::time::CycleRate  *cycle_pwm_control_;
             AckermannStateStamped cmd_raw_;
             AckermannStateStamped state_raw_;
-            car::com::objects::ControlParameter control_parameter_;
+            car::com::objects::ControlParameter control_parameter_target_;
+            car::com::objects::ControlParameter control_parameter_current_;
             car::com::objects::AckermannConfig *ackermann_config_;
             car::com::objects::PoseStamped pose_stamped_;
             car::VehileParameters vehile_parameters_;   /// stored in eeeprom

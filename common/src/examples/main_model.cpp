@@ -43,7 +43,7 @@ void setup()
 
   
   rcar = new car::model::RaceCar();
-  rcar->vehile_parameters_.control = car::com::objects::ControlParameter::get_default();
+  rcar->control_parameter_target_ = car::com::objects::ControlParameter::get_default();
   rcar->init();
 
   Serial.begin(115200); /// init serial
@@ -105,7 +105,7 @@ void loop()
     }
     {
       /// config control
-      msg_tx.push_object(Object(rcar->control_parameter_, TYPE_CONTROL_CONFIG));
+      msg_tx.push_object(Object(rcar->control_parameter_current_, TYPE_CONTROL_PARAMETER));
     }
 
     if (error != NULL)
@@ -140,6 +140,10 @@ void loop()
         //cmd.mode = AckermannState::MODE_VELOCITY;
         cmd.copy_to(rcar->get_cmd_raw().value);
         rcar->get_cmd_raw().stamp = car::com::objects::Time::toMicros(cmd.stamp);
+      }
+      case TYPE_CONTROL_PARAMETER:
+      { /// case sync object
+        object.get(rcar->control_parameter_target_);
       }
       break;
       default: /// case unkown type

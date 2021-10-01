@@ -24,6 +24,8 @@ void RaceCar::init()
     ackermann_config_ = NULL;
     board_ = new car::bldc::Driver;
 
+    apply_parameter();
+
     motor_[LEFT] = new car::bldc::Motor(std::array<uint8_t, 3>({33, 26, 31}),
                                         std::array<uint8_t, 3>({10, 22, 23}),
                                         std::array<uint8_t, 3>({A15, A16, A17}), 2, car::math::Direction::COUNTERCLOCKWISE);
@@ -34,23 +36,19 @@ void RaceCar::init()
 
     board_->init(motor_[LEFT], motor_[RIGHT]);
 
-    motor_[LEFT]->init(11, std::array<car::math::AngleDeg, 2>({
+    motor_[LEFT]->init(vehile_parameters_.control.bldc[LEFT].nr_of_coils, std::array<car::math::AngleDeg, 2>({
                                         vehile_parameters_.control.bldc[LEFT].angle_offset[FORWARD], 
                                         vehile_parameters_.control.bldc[LEFT].angle_offset[BACKWARD]}),
                        std::bind(&car::encoder::Encoder::read, encoder_, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
                        std::bind(&car::bldc::Driver::update_pwm, board_, std::placeholders::_1, std::placeholders::_2),
                        std::bind(&car::bldc::Driver::couple_pwm, board_, std::placeholders::_1, std::placeholders::_2));
 
-    motor_[RIGHT]->init(11, std::array<car::math::AngleDeg, 2>({
+    motor_[RIGHT]->init(vehile_parameters_.control.bldc[RIGHT].nr_of_coils, std::array<car::math::AngleDeg, 2>({
                                         vehile_parameters_.control.bldc[RIGHT].angle_offset[FORWARD], 
                                         vehile_parameters_.control.bldc[RIGHT].angle_offset[BACKWARD]}),
                         std::bind(&car::encoder::Encoder::read, encoder_, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3),
                         std::bind(&car::bldc::Driver::update_pwm, board_, std::placeholders::_1, std::placeholders::_2),
                         std::bind(&car::bldc::Driver::couple_pwm, board_, std::placeholders::_1, std::placeholders::_2));
-
-    apply_parameter();
-
-
 
     cycle_pwm_control_ = new car::time::CycleRate(10);
     cmd_raw_().couble(false);
@@ -60,14 +58,35 @@ void RaceCar::init()
 
 void RaceCar::apply_parameter()
 {
+    using namespace car::com::objects;
+    bool parameters_applied = false;
 
-    const auto &pid_l = vehile_parameters_.control.pid[LEFT];
-    const auto &pid_r = vehile_parameters_.control.pid[RIGHT];
-    pid_rps_[ LEFT] = new car::math::PID(pid_l.dt, pid_l.min, pid_l.max, pid_l.Kp, pid_l.Ki, pid_l.Kd);
-    pid_rps_[RIGHT] = new car::math::PID(pid_r.dt, pid_r.min, pid_r.max, pid_r.Kp, pid_r.Ki, pid_r.Kd);
+    if(vehile_parameters_.control.pid[LEFT] != control_parameter_target_.pid[LEFT]) {
+        parameters_applied = true;
+        const auto &pid = vehile_parameters_.control.pid[LEFT] = control_parameter_target_.pid[LEFT];   
+        pid_rps_[ LEFT] = new car::math::PID(pid.dt, pid.min, pid.max, pid.Kp, pid.Ki, pid.Kd);
+    }
+    if(vehile_parameters_.control.pid[RIGHT] != control_parameter_target_.pid[RIGHT]) {
+        parameters_applied = true;
+        const auto &pid = vehile_parameters_.control.pid[RIGHT] = control_parameter_target_.pid[RIGHT];    
+        pid_rps_[ RIGHT] = new car::math::PID(pid.dt, pid.min, pid.max, pid.Kp, pid.Ki, pid.Kd);
+    }
 
-    control_parameter_ = vehile_parameters_.control;
-    control_parameter_.stamp = car::com::objects::Time::now();
+    if(vehile_parameters_.control.bldc[LEFT] != control_parameter_target_.bldc[LEFT]) {
+        parameters_applied = true;
+        const auto &bldc = vehile_parameters_.control.bldc[LEFT] = control_parameter_target_.bldc[LEFT];
+        motor_[LEFT]->set_phase_offsets(std::array<car::math::AngleDeg, 2>({bldc.angle_offset[FORWARD], bldc.angle_offset[BACKWARD]}));
+    }
+    if(vehile_parameters_.control.bldc[RIGHT] != control_parameter_target_.bldc[RIGHT]) {
+        parameters_applied = true;
+        const auto &bldc = vehile_parameters_.control.bldc[RIGHT] = control_parameter_target_.bldc[RIGHT];
+        motor_[RIGHT]->set_phase_offsets(std::array<car::math::AngleDeg, 2>({bldc.angle_offset[FORWARD], bldc.angle_offset[BACKWARD]}));
+    }
+
+    if(parameters_applied) {
+        control_parameter_current_ = vehile_parameters_.control;
+        control_parameter_current_.stamp = car::com::objects::Time::now();
+    }
 }
 void RaceCar::update()
 {
@@ -76,6 +95,9 @@ void RaceCar::update()
 
     if (cycle_pwm_control_->passed())
     {
+
+        apply_parameter();
+        
         motor_[LEFT ]->couple(cmd_raw_().coubled[LEFT ]);
         motor_[RIGHT]->couple(cmd_raw_().coubled[RIGHT]);
 
