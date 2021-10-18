@@ -24,7 +24,6 @@ void RaceCar::init()
     ackermann_config_ = NULL;
     board_ = new car::bldc::Driver;
 
-    apply_parameter();
 
     motor_[LEFT] = new car::bldc::Motor(std::array<uint8_t, 3>({33, 26, 31}),
                                         std::array<uint8_t, 3>({10, 22, 23}),
@@ -34,6 +33,7 @@ void RaceCar::init()
                                          std::array<uint8_t, 3>({A15, A16, A17}), 14, car::math::Direction::COUNTERCLOCKWISE);
     encoder_ = new car::encoder::AS5048A(std::array<uint8_t, 2>({motor_[LEFT]->pin_encoder_cs(), motor_[RIGHT]->pin_encoder_cs()}), 13);
 
+    apply_parameter();
     board_->init(motor_[LEFT], motor_[RIGHT]);
 
     motor_[LEFT]->init(vehile_parameters_.control.bldc[LEFT].nr_of_coils, std::array<car::math::AngleDeg, 2>({
